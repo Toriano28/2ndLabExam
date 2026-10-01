@@ -4,11 +4,11 @@
 
 ### Student Information
 
-Name:
+Name:Adam Kelly L. Toriano
 
-Section:
+Section:2063 - CCE 106 10:00-12:00
 
-Date:
+Date:10/2/2026
 
 ### Required Features
 
