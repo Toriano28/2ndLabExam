@@ -1,98 +1,136 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { API_BASE_URL } from '../../constants/api';
+import { useAuth } from '../../context/AuthContext';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+interface Student {
+  id: string | number;
+  name: string;
+  email?: string;
+  section?: string;
+}
 
-export default function HomeScreen() {
+export default function DashboardScreen() {
+  const { token } = useAuth();
+  const router = useRouter();
+
+  const [students, setStudents] = useState<Student[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const fetchStudents = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const response = await fetch(`${API_BASE_URL}/students`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch students.');
+      }
+
+      const data = await response.json();
+      setStudents(data);
+    } catch (err: any) {
+      setError(err.message || 'An error occurred while fetching data.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStudents();
+  }, []);
+
+  // Search/Filter Functionality
+  const filteredStudents = students.filter((student) =>
+    student.name?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    <View style={styles.container}>
+      {/* Search Input */}
+      <TextInput
+        style={styles.searchInput}
+        placeholder="Search students..."
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+      />
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+      {/* Loading State */}
+      {loading ? (
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color="#007AFF" />
+          <Text style={{ marginTop: 10 }}>Loading students...</Text>
+        </View>
+      ) : error ? (
+        /* Error State */
+        <View style={styles.centerContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={fetchStudents}>
+            <Text style={styles.retryText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      ) : filteredStudents.length === 0 ? (
+        /* Empty State */
+        <View style={styles.centerContainer}>
+          <Text style={styles.emptyText}>No students found.</Text>
+        </View>
+      ) : (
+        /* Student List */
+        <FlatList
+          data={filteredStudents}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.card}
+              onPress={() => router.push(`/student/${item.id}`)}
+            >
+              <Text style={styles.studentName}>{item.name}</Text>
+              {item.section ? <Text>Section: {item.section}</Text> : null}
+            </TouchableOpacity>
+          )}
+        />
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: { flex: 1, padding: 16, backgroundColor: '#f5f5f5' },
+  searchInput: {
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    marginBottom: 16,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  card: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
+  studentName: { fontSize: 18, fontWeight: 'bold' },
+  errorText: { color: 'red', fontSize: 16, marginBottom: 12 },
+  retryButton: { backgroundColor: '#007AFF', padding: 10, borderRadius: 6 },
+  retryText: { color: '#fff', fontWeight: 'bold' },
+  emptyText: { fontSize: 16, color: '#666' },
 });
