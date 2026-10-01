@@ -29,7 +29,7 @@ Date:10/2/2026
 
 ### API
 
-Base URL: `REPLACE_WITH_EXAM_API` (set in `constants/api.ts`)
+Base URL: `https://github.com/Toriano28/2ndLabExam.git` (set in `constants/api.ts`)
 
 POST /login
 
