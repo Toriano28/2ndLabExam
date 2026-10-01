@@ -12,25 +12,24 @@ Date:10/2/2026
 
 ### Required Features
 
-- [ ] Login
-- [ ] Authentication state
-- [ ] Secure token storage
-- [ ] Protected navigation
-- [ ] Dashboard
-- [ ] Student API request
-- [ ] Loading state
-- [ ] Error state
-- [ ] Empty state
-- [ ] Search/filter
-- [ ] Dynamic student details
-- [ ] Profile
-- [ ] Session restoration
-- [ ] Logout
+- [x] Login
+- [x] Authentication state
+- [x] Secure token storage
+- [x] Protected navigation
+- [x] Dashboard
+- [x] Student API request
+- [x] Loading state
+- [x] Error state
+- [x] Empty state
+- [x] Search/filter
+- [x] Dynamic student details
+- [x] Profile
+- [x] Session restoration
+- [x] Logout
 
 ### API
 
-Base URL: `https://github.com/Toriano28/2ndLabExam.git` (set in `constants/api.ts`)
-
+Base URL: `REPLACE_WITH_EXAM_API` (set in `constants/api.ts`)
 POST /login
 
 GET /students
