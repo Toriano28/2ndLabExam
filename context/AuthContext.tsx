@@ -1,125 +1,59 @@
-import * as SecureStore from 'expo-secure-store';
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Platform } from 'react-native';
-import { API_BASE_URL } from '../constants/api';
+import { useRouter } from 'expo-router';
+import React, { createContext, useContext, useState } from 'react';
 
-const TOKEN_KEY = 'user_auth_token';
-
-// Helper to safely save token
-async function saveToken(token: string) {
-  if (Platform.OS !== 'web' && (await SecureStore.isAvailableAsync())) {
-    await SecureStore.setItemAsync(TOKEN_KEY, token);
-  } else if (typeof window !== 'undefined') {
-    localStorage.setItem(TOKEN_KEY, token);
-  }
-}
-
-// Helper to safely retrieve token
-async function getToken(): Promise<string | null> {
-  if (Platform.OS !== 'web' && (await SecureStore.isAvailableAsync())) {
-    return await SecureStore.getItemAsync(TOKEN_KEY);
-  } else if (typeof window !== 'undefined') {
-    return localStorage.getItem(TOKEN_KEY);
-  }
-  return null;
-}
-
-// Helper to safely remove token
-async function removeToken() {
-  if (Platform.OS !== 'web' && (await SecureStore.isAvailableAsync())) {
-    await SecureStore.deleteItemAsync(TOKEN_KEY);
-  } else if (typeof window !== 'undefined') {
-    localStorage.removeItem(TOKEN_KEY);
-  }
+interface User {
+  name: string;
+  email: string;
 }
 
 interface AuthContextType {
+  user: User | null;
   token: string | null;
-  user: any | null;
-  isLoading: boolean;
-  login: (credentials: any) => Promise<void>;
-  logout: () => Promise<void>;
+  signInWithApi: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
+  signOut: () => void;
 }
 
-// Idagdag ang `export` sa unahan ng const AuthContext
-export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const router = useRouter();
   const [token, setToken] = useState<string | null>(null);
-  const [user, setUser] = useState<any | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [user, setUser] = useState<User | null>(null);
 
-  // 1. Session Restoration on app launch
-  useEffect(() => {
-    async function restoreSession() {
-      try {
-        const savedToken = await getToken();
-        if (savedToken) {
-          const response = await fetch(`${API_BASE_URL}/profile`, {
-            headers: {
-              Authorization: `Bearer ${savedToken}`,
-            },
-          });
+  const signInWithApi = async (email: string, pass: string) => {
+    try {
+      const response = await fetch('https://reqres.in/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password: pass }),
+      });
 
-          if (response.ok) {
-            const userData = await response.json();
-            setToken(savedToken);
-            setUser(userData);
-          } else {
-            await removeToken();
-          }
-        }
-      } catch (error) {
-        console.error('Failed to restore session:', error);
-      } finally {
-        setIsLoading(false);
+      const data = await response.json();
+
+      if (response.ok && data.token) {
+        setToken(data.token);
+        setUser({
+          name: email.split('@')[0],
+          email: email,
+        });
+        router.replace('/');
+        return { success: true };
+      } else {
+        return { success: false, error: data.error || 'Invalid email or password' };
       }
-    }
-
-    restoreSession();
-  }, []);
-
-  // 2. Login implementation
-  const login = async (credentials: any) => {
-    const response = await fetch(`${API_BASE_URL}/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(credentials),
-    });
-
-    if (!response.ok) {
-      throw new Error('Login failed');
-    }
-
-    const data = await response.json();
-    const authToken = data.token;
-
-    await saveToken(authToken);
-    setToken(authToken);
-
-    // Fetch user profile after login
-    const profileRes = await fetch(`${API_BASE_URL}/profile`, {
-      headers: {
-        Authorization: `Bearer ${authToken}`,
-      },
-    });
-    if (profileRes.ok) {
-      const profileData = await profileRes.json();
-      setUser(profileData);
+    } catch (err) {
+      return { success: false, error: 'Network error or server unavailable' };
     }
   };
 
-  // 3. Logout implementation
-  const logout = async () => {
-    await removeToken();
+  const signOut = () => {
     setToken(null);
     setUser(null);
+    router.replace('/sign-in');
   };
 
   return (
-    <AuthContext.Provider value={{ token, user, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, token, signInWithApi, signOut }}>
       {children}
     </AuthContext.Provider>
   );

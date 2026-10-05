@@ -1,91 +1,181 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { API_BASE_URL } from '../../constants/api';
-import { useAuth } from '../../context/AuthContext';
+import {
+  ActivityIndicator,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+
+interface StudentDetail {
+  id: string;
+  name: string;
+  email: string;
+  course: string;
+  yearLevel: string;
+  status: string;
+  gpa: string;
+}
 
 export default function StudentDetailScreen() {
   const { id } = useLocalSearchParams();
-  const { token } = useAuth();
   const router = useRouter();
 
-  const [student, setStudent] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [student, setStudent] = useState<StudentDetail | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchStudentDetail = async () => {
+    setIsLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      setError('');
-      const response = await fetch(`${API_BASE_URL}/students/${id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      // Simulating API call para sa specific student ID
+      await new Promise((resolve) => setTimeout(resolve, 800));
+
+      if (!id) throw new Error('Invalid Student ID');
+
+      // Mock Data response
+      setStudent({
+        id: String(id),
+        name: id === '1' ? 'Juan Dela Cruz' : id === '2' ? 'Maria Clara' : 'Student ' + id,
+        email: `student${id}@school.edu`,
+        course: 'Bachelor of Science in Information Technology',
+        yearLevel: '3rd Year - Regular',
+        status: 'Enrolled',
+        gpa: '1.25',
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch student details.');
-      }
-
-      const data = await response.json();
-      setStudent(data);
-    } catch (err: any) {
-      setError(err.message || 'An error occurred.');
+    } catch (err) {
+      setError('Could not load student details.');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    if (id) {
-      fetchStudentDetail();
-    }
+    fetchStudentDetail();
   }, [id]);
 
   return (
-    <View style={styles.container}>
-      <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-        <Text style={styles.backText}>← Back</Text>
-      </TouchableOpacity>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        {/* Back Button Header */}
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <Text style={styles.backText}>← Back to Directory</Text>
+        </TouchableOpacity>
 
-      {loading ? (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={{ marginTop: 10 }}>Loading details...</Text>
-        </View>
-      ) : error ? (
-        <View style={styles.centerContainer}>
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={fetchStudentDetail}>
-            <Text style={styles.retryText}>Retry</Text>
-          </TouchableOpacity>
-        </View>
-      ) : student ? (
-        <View style={styles.card}>
-          <Text style={styles.title}>{student.name || 'Student Detail'}</Text>
-          <Text style={styles.detail}>ID: {student.id}</Text>
-          {student.email ? <Text style={styles.detail}>Email: {student.email}</Text> : null}
-          {student.section ? <Text style={styles.detail}>Section: {student.section}</Text> : null}
-          {student.course ? <Text style={styles.detail}>Course: {student.course}</Text> : null}
-        </View>
-      ) : (
-        <View style={styles.centerContainer}>
-          <Text>No details available.</Text>
-        </View>
-      )}
-    </View>
+        {isLoading ? (
+          <View style={styles.centerContainer}>
+            <ActivityIndicator size="large" color="#2563EB" />
+            <Text style={styles.loadingText}>Fetching details for Student #{id}...</Text>
+          </View>
+        ) : error ? (
+          <View style={styles.centerContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={fetchStudentDetail}>
+              <Text style={styles.retryText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        ) : student ? (
+          <ScrollView contentContainerStyle={styles.scrollContent}>
+            {/* Header Profile Card */}
+            <View style={styles.profileCard}>
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>{student.name.charAt(0).toUpperCase()}</Text>
+              </View>
+              <Text style={styles.name}>{student.name}</Text>
+              <Text style={styles.email}>{student.email}</Text>
+              <View style={styles.statusBadge}>
+                <Text style={styles.statusBadgeText}>{student.status}</Text>
+              </View>
+            </View>
+
+            {/* Academic Information Card */}
+            <View style={styles.infoCard}>
+              <Text style={styles.cardHeader}>Academic Information</Text>
+
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Student ID</Text>
+                <Text style={styles.infoValue}>#{student.id}</Text>
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Course / Program</Text>
+                <Text style={styles.infoValue}>{student.course}</Text>
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Year Level</Text>
+                <Text style={styles.infoValue}>{student.yearLevel}</Text>
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Current GPA</Text>
+                <Text style={[styles.infoValue, { color: '#16A34A', fontWeight: '800' }]}>
+                  {student.gpa}
+                </Text>
+              </View>
+            </View>
+          </ScrollView>
+        ) : null}
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#f5f5f5' },
-  backButton: { marginBottom: 20 },
-  backText: { color: '#007AFF', fontSize: 16, fontWeight: 'bold' },
+  safeArea: { flex: 1, backgroundColor: '#F8FAFC' },
+  container: { flex: 1, paddingHorizontal: 20, paddingTop: 16, maxWidth: 800, width: '100%', alignSelf: 'center' },
+  backButton: { marginBottom: 16, alignSelf: 'flex-start' },
+  backText: { color: '#2563EB', fontSize: 15, fontWeight: '600' },
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  card: { backgroundColor: '#fff', padding: 20, borderRadius: 10, borderWidth: 1, borderColor: '#ddd' },
-  title: { fontSize: 22, fontWeight: 'bold', marginBottom: 15 },
-  detail: { fontSize: 16, marginBottom: 8, color: '#333' },
-  errorText: { color: 'red', fontSize: 16, marginBottom: 12 },
-  retryButton: { backgroundColor: '#007AFF', padding: 10, borderRadius: 6 },
-  retryText: { color: '#fff', fontWeight: 'bold' },
+  loadingText: { marginTop: 12, color: '#64748B', fontSize: 14 },
+  errorText: { color: '#EF4444', fontSize: 16, marginBottom: 12, fontWeight: '600' },
+  retryButton: { backgroundColor: '#2563EB', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8 },
+  retryText: { color: '#FFFFFF', fontWeight: '600' },
+  scrollContent: { paddingBottom: 32, gap: 16 },
+  profileCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  avatar: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#EFF6FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: '#2563EB',
+  },
+  avatarText: { fontSize: 28, fontWeight: '800', color: '#2563EB' },
+  name: { fontSize: 22, fontWeight: '800', color: '#0F172A' },
+  email: { fontSize: 14, color: '#64748B', marginTop: 2, marginBottom: 12 },
+  statusBadge: { backgroundColor: '#DCFCE7', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20 },
+  statusBadgeText: { color: '#15803D', fontSize: 12, fontWeight: '700' },
+  infoCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  cardHeader: { fontSize: 16, fontWeight: '700', color: '#1E293B', marginBottom: 16 },
+  infoRow: { paddingVertical: 8 },
+  infoLabel: { fontSize: 13, color: '#64748B', fontWeight: '500', marginBottom: 2 },
+  infoValue: { fontSize: 15, color: '#0F172A', fontWeight: '600' },
+  divider: { height: 1, backgroundColor: '#F1F5F9', marginVertical: 4 },
 });
